@@ -37,8 +37,6 @@ def optimize_transactions(debts):
     debtors = [ (amount, person) for person, amount in debts.items() if amount > 0 ]
     creditors = [ (-amount, person) for person, amount in debts.items() if amount < 0 ]
 
-    max_amount = max([amount for amount, _ in debtors] + [-amount for amount, _ in creditors])
-
     # Creating the problem
     prob = LpProblem("DebtRepayment", LpMinimize)
 
@@ -62,9 +60,10 @@ def optimize_transactions(debts):
        prob += lpSum([pay_amount[(debtor, creditor)] for _, creditor in creditors]) == amount
 
     # If a debtor pays a creditor, the amount must be greater than 0
-    for _, debtor in debtors:
+    for d_amount, debtor in debtors:
         for _, creditor in creditors:
-            prob += pay_amount[(debtor, creditor)] <= is_paying[(debtor, creditor)] * max_amount
+            # Debtor pays maximum the amount he owes
+            prob += pay_amount[(debtor, creditor)] <= is_paying[(debtor, creditor)] * d_amount
 
     # Minimum number of transactions
     prob.objective = lpSum([is_paying[(debtor, creditor)] for _, debtor in debtors for _, creditor in creditors])
@@ -91,9 +90,6 @@ def save_repays(repays, output_file):
 if __name__ == "__main__":
     input_file = sys.argv[1]
     output_file = output_name(input_file)
-
-    # print output file
-    print(output_file)
 
     debts = calc_debts(input_file)
     repays = optimize_transactions(debts)

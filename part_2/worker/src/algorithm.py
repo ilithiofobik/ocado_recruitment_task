@@ -3,12 +3,6 @@ import sys
 from os import path
 from pulp import *
 
-def output_name(input_name):
-    dir = path.dirname(input_name)
-    file_name = path.basename("output.csv")
-
-    return path.join(dir, file_name)
-
 def add_debt(debts, debtor, creditor, amount):
     if debtor not in debts:
         debts[debtor] = 0 
@@ -31,18 +25,19 @@ def calc_debts(f):
     return debts
 
 def optimize_transactions(debts):
+    # List of final repayements
     repays = []
     
+    # Splitting all actors into debtors and creditors
     debtors = [ (amount, person) for person, amount in debts.items() if amount > 0 ]
     creditors = [ (-amount, person) for person, amount in debts.items() if amount < 0 ]
-
-    print("debtors: ", debtors)
-    print("creditors: ", creditors)
 
     # Creating the problem
     prob = LpProblem("DebtRepayment", LpMinimize)
 
+    # This variable defines whether debtor x pays creditor y
     is_paying = {} 
+    # This variable defines how much debtor x pays creditor y
     pay_amount = {}
 
     # Creating variables representing payments
@@ -54,10 +49,11 @@ def optimize_transactions(debts):
             is_paying[(debtor, creditor)] = lp_is_paying
             pay_amount[(debtor, creditor)] = lp_amount
 
-    #Creating the constrains on sums of payments
+    # Every creditor should receive the amount he is owed
     for amount, creditor in creditors:
        prob += lpSum([pay_amount[(debtor, creditor)] for _, debtor in debtors]) == amount
 
+    # Every debtor should pay the amount he owes
     for amount, debtor in debtors:
        prob += lpSum([pay_amount[(debtor, creditor)] for _, creditor in creditors]) == amount
 
@@ -65,15 +61,16 @@ def optimize_transactions(debts):
     for d_amount, debtor in debtors:
         for _, creditor in creditors:
             # Debtor pays maximum the amount he owes
+            # If the debtor is not paying, the amount must be 0
             prob += pay_amount[(debtor, creditor)] <= is_paying[(debtor, creditor)] * d_amount
 
     # Minimum number of transactions
     prob.objective = lpSum([is_paying[(debtor, creditor)] for _, debtor in debtors for _, creditor in creditors])
 
-    # Solve the problem
+    # Solve the problem using a branch and cut solver
     prob.solve(PULP_CBC_CMD(msg=0))
 
-    # Print the results
+    # Save the results
     for _, debtor in debtors:
         for _, creditor in creditors:
             if is_paying[(debtor, creditor)].value() == 1:
@@ -81,9 +78,3 @@ def optimize_transactions(debts):
                 repays.append((debtor, creditor, amount))
 
     return repays
-
-def save_repays(repays, output_file):
-    with open(output_file, "w+", newline='') as f:
-        writer = csv.writer(f)
-        for debtor, creditor, amount in repays:
-            writer.writerow([debtor, creditor, amount])

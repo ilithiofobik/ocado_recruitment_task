@@ -1,8 +1,8 @@
 import csv
-import sys
-from os import path
 from pulp import *
 
+# Adding debt to the debts dictionary
+# If the debtor or creditor is not in the dictionary, add them with 0 debt
 def add_debt(debts, debtor, creditor, amount):
     if debtor not in debts:
         debts[debtor] = 0 
@@ -12,6 +12,7 @@ def add_debt(debts, debtor, creditor, amount):
     debts[debtor] += amount
     debts[creditor] -= amount
 
+# Sum up the debts from the input file
 def calc_debts(f):
     debts = { }
 
@@ -24,6 +25,7 @@ def calc_debts(f):
 
     return debts
 
+# Optimize the transactions using mixed integer programming
 def optimize_transactions(debts):
     # List of final repayements
     repays = []
@@ -51,11 +53,11 @@ def optimize_transactions(debts):
 
     # Every creditor should receive the amount he is owed
     for amount, creditor in creditors:
-       prob += lpSum([pay_amount[(debtor, creditor)] for _, debtor in debtors]) == amount
+        prob += lpSum([pay_amount[(debtor, creditor)] for _, debtor in debtors]) == amount
 
     # Every debtor should pay the amount he owes
     for amount, debtor in debtors:
-       prob += lpSum([pay_amount[(debtor, creditor)] for _, creditor in creditors]) == amount
+        prob += lpSum([pay_amount[(debtor, creditor)] for _, creditor in creditors]) == amount
 
     # If a debtor pays a creditor, the amount must be greater than 0
     for d_amount, debtor in debtors:

@@ -1,7 +1,8 @@
-import time, os, sys, json
+import time, os, sys, json, io, csv
 
 from config import get_config
 from aws import get_sqs_client, get_s3_client
+from algorithm import calc_debts, optimize_transactions
 
 def get_debts_id(sqs_client) -> str:
     response = sqs_client.receive_message(
@@ -19,9 +20,38 @@ def get_debts_id(sqs_client) -> str:
     return debts_id
 
 def get_debts(debts_id, s3_client):
-    return s3_client.get_object(
+    input_file = io.BytesIO()
+
+    s3_client.download_fileobj(
+        config.debts_bucket_name,
+        debts_id,
+        input_file
+    )
+
+    input_file.seek(0)
+    file_content = input_file.getvalue().decode('utf-8')
+
+    return calc_debts(io.StringIO(file_content))
+
+def save_repays(repays, debts_id, s3_client):
+    repays_file = io.StringIO()
+    writer = csv.writer(repays_file, delimiter=',')
+
+    print("Repays: ")
+    print(repays)
+    print("num of repays: ", len(repays))
+
+    for debtor, creditor, amount in repays:
+        writer.writerow([debtor, creditor, amount])
+    
+    repays_file.seek(0)
+    bytes_buffer = io.BytesIO(repays_file.getvalue().encode('utf-8'))
+    print(repays_file.getvalue())
+
+    s3_client.upload_fileobj(
         Bucket=config.debts_bucket_name,
-        Key=debts_id
+        Key=f"{debts_id}_results",
+        Fileobj=bytes_buffer
     )
 
 if __name__ == "__main__":
@@ -35,10 +65,15 @@ if __name__ == "__main__":
             debts_id = get_debts_id(sqs_client)
             print("Got debts_id!!!")
 
-            debts_info = get_debts(debts_id, s3_client)
+            debts = get_debts(debts_id, s3_client)
             print("Got debts_info!!!")
 
-            print(debts_info)
+            repays = optimize_transactions(debts)
+            print("Got repays!!!")
+
+            save_repays(repays, debts_id, s3_client)
+            print("Saved repays!!!")
+            # print(debts_info)
 
 
 

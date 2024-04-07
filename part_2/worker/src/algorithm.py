@@ -18,16 +18,15 @@ def add_debt(debts, debtor, creditor, amount):
     debts[debtor] += amount
     debts[creditor] -= amount
 
-def calc_debts(input_file):
+def calc_debts(f):
     debts = { }
 
-    with open(input_file, "r") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            creditor = row[0]
-            debtor = row[1]
-            amount = int(row[2])
-            add_debt(debts, debtor, creditor, amount)
+    reader = csv.reader(f)
+    for row in reader:
+        creditor = row[0]
+        debtor = row[1]
+        amount = int(row[2])
+        add_debt(debts, debtor, creditor, amount)
 
     return debts
 
@@ -36,6 +35,9 @@ def optimize_transactions(debts):
     
     debtors = [ (amount, person) for person, amount in debts.items() if amount > 0 ]
     creditors = [ (-amount, person) for person, amount in debts.items() if amount < 0 ]
+
+    print("debtors: ", debtors)
+    print("creditors: ", creditors)
 
     # Creating the problem
     prob = LpProblem("DebtRepayment", LpMinimize)
@@ -85,13 +87,3 @@ def save_repays(repays, output_file):
         writer = csv.writer(f)
         for debtor, creditor, amount in repays:
             writer.writerow([debtor, creditor, amount])
-
-
-if __name__ == "__main__":
-    input_file = sys.argv[1]
-    output_file = output_name(input_file)
-
-    debts = calc_debts(input_file)
-    repays = optimize_transactions(debts)
- 
-    save_repays(repays, output_file)

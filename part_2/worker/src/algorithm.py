@@ -27,7 +27,7 @@ def calc_debts(f):
 
 # Optimize the transactions using mixed integer programming
 def optimize_transactions(debts):
-    # List of final repayements
+    # List of final repayments
     repays = []
     
     # Splitting all actors into debtors and creditors

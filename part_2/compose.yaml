@@ -1,0 +1,32 @@
+services:
+  api:
+    build: api
+    ports:
+      - "8000:8000"
+    env_file:
+      - api/config.env
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  worker:
+    build: worker
+    env_file:
+      - worker/config.env
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  localstack:
+    image: localstack/localstack
+    environment:
+      - SERVICES=s3,sqs
+    volumes:
+      - ".localstack:/var/lib/localstack"
+      - ".localstack/init.sh:/etc/localstack/init/ready.d/init.sh"
+      - ".localstack/wait.sh:/wait.sh"
+    healthcheck:
+      test: ["CMD", "/wait.sh"]
+      interval: 2s
+      timeout: 10s
+      retries: 6

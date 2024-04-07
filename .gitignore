@@ -1,0 +1,11 @@
+# everything in localstack dir
+.localstack
+# except
+!.localstack/init.sh
+!.localstack/wait.sh
+
+.vscode
+
+.python-version
+
+__pycache__
